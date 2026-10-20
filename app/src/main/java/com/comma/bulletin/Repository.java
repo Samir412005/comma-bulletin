@@ -8,7 +8,7 @@ public final class Repository {
  private final Context context;
  private final SharedPreferences prefs;
  private final FeedSource source;
- public Repository(Context c){this(c,new HttpsFeedSource(BuildConfig.FEED_URL));}
+ public Repository(Context c){this(c,new FallbackFeedSource(new HttpsFeedSource(BuildConfig.FEED_URL),new HttpsFeedSource(BuildConfig.FALLBACK_FEED_URL)));}
  public Repository(Context c,FeedSource s){context=c.getApplicationContext();prefs=context.getSharedPreferences("bulletin",0);source=s;}
  public List<Item> cached(){try{return Item.parse(prefs.getString("feed",""));}catch(Exception e){return new ArrayList<>();}}
  public boolean isRead(String id){return prefs.getStringSet("read",Collections.emptySet()).contains(id);}
@@ -22,8 +22,7 @@ public final class Repository {
  public List<Item> sync() throws Exception {
   synchronized(LOCK){String raw=source.fetch();List<Item> list=Item.parse(raw);
    Set<String> seen=new HashSet<>(prefs.getStringSet("seen",Collections.emptySet()));boolean initialized=prefs.getBoolean("initialized",false);List<Item> fresh=new ArrayList<>();
-   for(Item i:list){if(initialized&&!seen.contains(i.id))fresh.add(i);seen.add(i.id);}
-   if(seen.size()>5000){seen.clear();for(Item i:list)seen.add(i.id);}
+   for(Item i:list){if(initialized&&!seen.contains(i.id)&&!isRead(i.id))fresh.add(i);seen.add(i.id);}
    if(!prefs.edit().putString("feed",raw).putStringSet("seen",seen).putBoolean("initialized",true).putLong("last_sync",System.currentTimeMillis()).commit())throw new Exception("storage");
    List<Item> favorites=favorites();for(int j=0;j<favorites.size();j++)for(Item current:list)if(current.id.equals(favorites.get(j).id)){favorites.set(j,current);break;}saveFavorites(favorites);
    if(!fresh.isEmpty())Notifications.show(context,fresh);return list;

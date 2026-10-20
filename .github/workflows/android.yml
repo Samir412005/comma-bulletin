@@ -2,6 +2,7 @@ name: Android APK
 on:
   push:
     branches: [main]
+    paths-ignore: ['feed/**', '.github/workflows/publish.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -44,14 +45,14 @@ jobs:
           set -euo pipefail
           BT="$ANDROID_HOME/build-tools/35.0.0"
           "$BT/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk | tee signature.txt
-          curl -fL --retry 2 https://github.com/Samir412005/comma-bulletin/releases/download/v1.0.2/iilami-1.0.2.apk -o previous.apk
+          curl -fL --retry 2 https://github.com/Samir412005/comma-bulletin/releases/download/v1.1.0/iilami-1.1.0.apk -o previous.apk
           "$BT/apksigner" verify --print-certs previous.apk > previous-signature.txt
           diff <(grep 'certificate SHA-256 digest' previous-signature.txt) <(grep 'certificate SHA-256 digest' signature.txt)
           "$BT/aapt" dump badging app/build/outputs/apk/release/app-release.apk > package.txt
-          grep "package: name='com.comma.bulletin' versionCode='4' versionName='1.1.0'" package.txt
-          cp app/build/outputs/apk/release/app-release.apk iilami-1.1.0.apk
-          test "$(stat -c%s iilami-1.1.0.apk)" -gt 2097152
-          sha256sum iilami-1.1.0.apk > SHA256SUMS.txt
+          grep "package: name='com.comma.bulletin' versionCode='5' versionName='1.2.0'" package.txt
+          cp app/build/outputs/apk/release/app-release.apk iilami-1.2.0.apk
+          test "$(stat -c%s iilami-1.2.0.apk)" -gt 2097152
+          sha256sum iilami-1.2.0.apk > SHA256SUMS.txt
       - name: Enable KVM for emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -68,9 +69,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="v1.1.0"
-          gh release create "$TAG" iilami-1.1.0.apk SHA256SUMS.txt signature.txt previous-signature.txt package.txt --target "$GITHUB_SHA" --title "v1.1.0" --notes "إعلامي 1.1.0: بحث فوري، تصنيفات، مفضلة محفوظة، وضع ليلي ونهاري، مشاركة ونسخ، جديد وغير المقروء، روابط وتواريخ نسبية، وتجربة Material 3 عربية مع العمل دون إنترنت. نفس توقيع 1.0.2 للتحديث مباشرة. Android 7+. التحديث الدوري تقريبي كل 15 دقيقة وقد يؤخره النظام. العداد داخل التطبيق؛ شارة أيقونة المشغل تعتمد على النظام والإشعارات."
-          curl -fIL --retry 2 "https://github.com/Samir412005/comma-bulletin/releases/download/$TAG/iilami-1.1.0.apk"
+          TAG="v1.2.0"
+          gh release create "$TAG" iilami-1.2.0.apk SHA256SUMS.txt signature.txt previous-signature.txt package.txt --target "$GITHUB_SHA" --title "v1.2.0" --notes "إعلامي 1.2.0: بحث فوري، تصنيفات، مفضلة محفوظة، وضع ليلي ونهاري، مشاركة ونسخ، جديد وغير المقروء، روابط وتواريخ نسبية، وتجربة Material 3 عربية مع العمل دون إنترنت. نفس توقيع 1.1.0 للتحديث مباشرة. Android 7+. قراءة GitHub أولاً مع احتياطي تلقائي؛ تحديث عند الفتح والعودة وكل 90 ثانية أثناء فتح التطبيق فقط بلا خدمة خلفية. العداد داخل التطبيق؛ شارة أيقونة المشغل تعتمد على النظام والإشعارات."
+          curl -fIL --retry 2 "https://github.com/Samir412005/comma-bulletin/releases/download/$TAG/iilami-1.2.0.apk"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

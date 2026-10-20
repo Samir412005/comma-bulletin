@@ -25,10 +25,10 @@ public final class Item {
   for(String pattern:patterns){SimpleDateFormat f=new SimpleDateFormat(pattern,Locale.US);f.setTimeZone(TimeZone.getTimeZone("UTC"));f.setLenient(false);ParsePosition p=new ParsePosition(0);Date d=f.parse(s,p);if(d!=null&&p.getIndex()==s.length())return d.getTime();}throw new Exception("date");
  }
  public static List<Item> parse(String raw) throws Exception {
-  if(raw.length()>1048576)throw new Exception("size");JSONObject root=new JSONObject(raw);
+  if(raw.length()>8388608)throw new Exception("size");JSONObject root=new JSONObject(raw);
   if(root.optInt("version",1)!=1)throw new Exception("version");
   JSONArray a=root.optJSONArray("items");if(a==null){if(root.has("items")&&!root.isNull("items"))throw new Exception("items");a=new JSONArray();}
-  if(a.length()>500)throw new Exception("count");List<Item> out=new ArrayList<>();Set<String> ids=new HashSet<>();
+  List<Item> out=new ArrayList<>();Set<String> ids=new HashSet<>();
   for(int i=0;i<a.length();i++){JSONObject o=a.optJSONObject(i);if(o==null)continue;Item item=new Item(o);if(ids.add(item.id))out.add(item);}
   out.sort((a1,b)->a1.pinned!=b.pinned?(a1.pinned?-1:1):Long.compare(b.timestamp,a1.timestamp));return out;
  }

@@ -1,0 +1,78 @@
+name: Publish announcement
+on:
+  repository_dispatch:
+    types: [new-post]
+  workflow_dispatch:
+    inputs:
+      text:
+        description: 'First line title, remaining lines body'
+        required: true
+        type: string
+      update_id:
+        description: 'Telegram update id (idempotency key)'
+        required: false
+        type: string
+permissions:
+  contents: write
+concurrency:
+  group: publish-feed
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Publish to feed with conflict retries
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import datetime, json, os, pathlib, subprocess, time
+          event = json.loads(pathlib.Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+          payload = event.get('client_payload', {}) if os.environ['GITHUB_EVENT_NAME'] == 'repository_dispatch' else event.get('inputs', {})
+          text = payload.get('text', '')
+          if not isinstance(text, str) or not text.strip():
+              raise SystemExit('text must be a nonempty string')
+          lines = text.strip().splitlines()
+          title, body = lines[0].strip(), '\n'.join(lines[1:]).strip()
+          if not title or len(title) > 200 or len(body) > 20000:
+              raise SystemExit('title/body exceed app limits (200/20000 characters)')
+          uid = str(payload.get('update_id') or int(time.time() * 1000))
+          if len(uid) > 120 or not all(c.isalnum() or c in '-_' for c in uid):
+              raise SystemExit('invalid update_id')
+          post_id = 'tg-' + uid
+          now = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
+          item = dict(id=post_id, title=title, body=body, category='إعلان', published_at=now, pinned=False, url='')
+          def git(*args):
+              return subprocess.run(['git', *args], check=True, text=True, capture_output=True)
+          git('config', 'user.name', 'github-actions[bot]')
+          git('config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
+          for attempt in range(3):
+              git('fetch', 'origin', 'main')
+              git('reset', '--hard', 'origin/main')
+              path = pathlib.Path('feed/feed.json')
+              feed = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {'version': 1, 'items': []}
+              if feed.get('version', 1) != 1 or not isinstance(feed.get('items'), list):
+                  raise SystemExit('invalid feed schema')
+              if any(i.get('id') == post_id for i in feed['items'] if isinstance(i, dict)):
+                  print('Already published:', post_id)
+                  break
+              feed['items'].insert(0, item)
+              feed['updated_at'] = now
+              feed['version'] = 1
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_text(json.dumps(feed, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+              git('add', str(path))
+              git('commit', '-m', 'feed: publish ' + post_id)
+              pushed = subprocess.run(['git', 'push', 'origin', 'HEAD:main'], text=True, capture_output=True)
+              if pushed.returncode == 0:
+                  print('Published:', post_id)
+                  break
+              if attempt == 2:
+                  raise SystemExit('push failed after 3 attempts: ' + pushed.stderr)
+              time.sleep(2 * (attempt + 1))
+          PY

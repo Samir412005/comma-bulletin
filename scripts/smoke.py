@@ -28,10 +28,28 @@ def close(): adb('shell','am','force-stop','com.comma.bulletin')
 
 # Install the previous public release, then perform a real same-signature upgrade.
 adb('install','-r','previous.apk');launch();close()
-adb('install','-r','iilami-1.1.0.apk');adb('logcat','-c');launch()
+adb('install','-r','iilami-1.2.0.apk');adb('logcat','-c');launch()
 text('إعلامي');text('المظهر')
 # Wait until at least one live announcement has arrived.
 card=find(lambda a:a.get('content-desc','').startswith('فتح الإعلان:'),wait=30)
+# Prove that the dispatched GitHub-only announcement reaches the signed 1.2.0 APK.
+with urllib.request.urlopen('https://raw.githubusercontent.com/Samir412005/comma-bulletin/main/feed/feed.json?t='+str(time.time_ns())) as response:
+    assert response.status == 200
+    live = json.load(response)
+assert any(i['id']=='tg-release120-test' for i in live['items']), live
+edit=find(lambda a:a.get('class')=='android.widget.EditText')
+tap(edit);adb('shell','input','text','AUTO120');time.sleep(2)
+find(lambda a:'AUTO120' in a.get('content-desc','') and a.get('content-desc','').startswith('فتح الإعلان:'))
+adb('shell','input','keyevent','4')
+clear=find(lambda a:'clear' in a.get('content-desc','').lower() or 'محو' in a.get('content-desc','') or 'مسح' in a.get('content-desc',''))
+tap(clear)
+# A foreground poll occurs within 90 seconds; screen-off must suspend all future polls.
+adb('logcat','-c');time.sleep(95)
+assert 'raw.githubusercontent.com' in adb('logcat','-d','-s','BulletinSync:I')
+adb('shell','input','keyevent','223');time.sleep(3);adb('logcat','-c');time.sleep(95)
+assert 'Feed fetched:' not in adb('logcat','-d','-s','BulletinSync:I')
+adb('shell','input','keyevent','224');adb('shell','wm','dismiss-keyguard');time.sleep(4)
+print('PASS: dispatched GitHub-only post visible in signed 1.2.0; foreground 90s poll; screen-off polling suspended')
 # Search must filter title AND body immediately and display the empty state.
 edit=find(lambda a:a.get('class')=='android.widget.EditText')
 tap(edit);adb('shell','input','text','ZZZnonexistent123');time.sleep(1);text('لا نتائج')
