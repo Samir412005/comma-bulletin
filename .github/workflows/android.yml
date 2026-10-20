@@ -44,15 +44,16 @@ jobs:
           BT="$ANDROID_HOME/build-tools/35.0.0"
           "$BT/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk | tee signature.txt
           "$BT/aapt" dump badging app/build/outputs/apk/release/app-release.apk > package.txt
+          grep "versionCode='3' versionName='1.0.2'" package.txt
           head -5 package.txt
-          cp app/build/outputs/apk/release/app-release.apk iilami-1.0.0.apk
-          sha256sum iilami-1.0.0.apk > SHA256SUMS.txt
+          cp app/build/outputs/apk/release/app-release.apk iilami-1.0.2.apk
+          sha256sum iilami-1.0.2.apk > SHA256SUMS.txt
       - name: Publish public APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="v1.0.0-build.${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" iilami-1.0.0.apk SHA256SUMS.txt signature.txt package.txt --title "إعلامي 1.0.0" --notes "إصدار تجريبي عربي RTL. Android 7+. مصدر JSON عام، ربط البوت غير مفعّل. التحقق الدوري تقريبي كل 15 دقيقة وقد يؤخره النظام."
+          TAG="v1.0.2"
+          gh release create "$TAG" iilami-1.0.2.apk SHA256SUMS.txt signature.txt package.txt --target "$GITHUB_SHA" --title "إعلامي 1.0.2" --notes "تحديث رابط مصدر الإعلانات. Android 7+. التحقق الدوري تقريبي كل 15 دقيقة وقد يؤخره النظام."
       - uses: actions/upload-artifact@v4
         if: always()
         with:

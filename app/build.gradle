@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 android {
  namespace 'com.comma.bulletin'
  compileSdk 35
- defaultConfig { applicationId 'com.comma.bulletin'; minSdk 24; targetSdk 34; versionCode 1; versionName '1.0.0'; buildConfigField 'String', 'FEED_URL', '"https://bulletin-iilami-3n8e59jd000007agwak4t00004en1rq7a000000.salix-sites.comma.surf/feed.json"' }
+ defaultConfig { applicationId 'com.comma.bulletin'; minSdk 24; targetSdk 34; versionCode 3; versionName '1.0.2'; buildConfigField 'String', 'FEED_URL', '"https://iilami-feed-3n8e59jd000007agwak4t00004en1rn69m0000g.salix-sites.comma.surf/feed.json"' }
  buildFeatures { buildConfig true }
  signingConfigs { release { storeFile file(System.getenv('SIGNING_STORE') ?: 'release.jks'); storePassword System.getenv('SIGNING_PASSWORD'); keyAlias 'iilami'; keyPassword System.getenv('SIGNING_PASSWORD') } }
  buildTypes { release { signingConfig signingConfigs.release; minifyEnabled false } }
